@@ -25,7 +25,7 @@ Install FastAPI and an ASGI server (e.g., Uvicorn):
 ```
 Clone the repository to your local machine:
 
-- git clone https://github.com/
+- git clone https://github.com/UrielSabah/BackstageIL.git
 
 Install the required dependencies:
 - pip3 install -r requirements.txt
