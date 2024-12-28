@@ -13,6 +13,7 @@ The API allows you to retrieve flight information, add new flights, and update e
 
 - **GET**: Retrieve hall information by hall_id.
 - **POST**: Add a new hall.
+- **PUT**: Update an existing hall.
 
 ## Prerequisites
 Make sure you have the following installed:
@@ -61,7 +62,7 @@ Example Response:
 ```
 ###
 
-#### 2. Add or Update Flight (POST) 
+#### 2. Add a new Music Hall (POST) 
 ```
   POST http://127.0.0.1:8000/music-halls/
 ```
@@ -75,18 +76,35 @@ Body:
 ```
 ```
 
-Example Response (for new flight):
+Example Response (for new Hall):
 ```
 ```
 
-Example Response (for updated flight):
+
+#### 3. Update an existing Music Hall (PUT) 
+```
+  PUT http://127.0.0.1:8000/music-halls//<hall_id>
+```
+
+This endpoint allows you to update an existing hall 
+
+Example Request:
+```
+```
+Body: 
+```
+```
+Example Response (for updated Hall):
 ```
 ```
 
 
 ## Run Tests
 You can run the tests by executing the test_app.py file:
-- python -m unittest test_main.py
+```
+python -m unittest discover tests/
+```
+
 
 
 
