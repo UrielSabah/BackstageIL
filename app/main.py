@@ -1,13 +1,23 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
+from fastapi.middleware.cors import CORSMiddleware
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
 from app.neondb import insert_music_hall, get_music_hall, update_music_hall
 from app.config import SECRET_KEY
+
 
 # Define the FastAPI app
 app = FastAPI(
     title="MusicHalls API",
     description="API for technical information for backstage",
     version="1.0.0"
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (replace '*' with specific URLs if needed)
+    allow_credentials=True,
+    allow_methods=["GET"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
 )
 
 
