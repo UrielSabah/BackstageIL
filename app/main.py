@@ -1,14 +1,16 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
-from app.neondb import insert_music_hall, get_music_hall, update_music_hall
+from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
+from fastapi.responses import FileResponse
+import os
 from app.config import SECRET_KEY
 
 
 # Define the FastAPI app
 app = FastAPI(
-    title="MusicHalls API",
-    description="API for technical information for backstage",
+    title="BackstageIL API",
+    description="API for technical information for backstage's",
     version="1.0.0"
 )
 
@@ -27,14 +29,29 @@ def verify_api_key(api_key: str = Header(...)):
         raise HTTPException(status_code=403, detail="Invalid API key")
 
 
-@app.get("/", tags=["App"])
+@app.get("/", tags=["Music Hall Management"])
 def read_root():
-    return {"message": "Hello, World!"}
+    return {"message": "ITS ALIVE!!!"}
 
 
-@app.get("/items/{item_id}", tags=["App"])
-def read_item(item_id: int, q: str = None):
-    return {"item_id": item_id, "q": q}
+@app.get("/ads.txt", include_in_schema=False, tags=["Music Hall Management"])
+async def serve_ads_txt():
+    # Path to the ads.txt file in the root directory
+    file_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "ads.txt"))
+    if os.path.exists(file_path):
+        return FileResponse(file_path)
+    return {"error": "ads.txt not found"}
+
+
+# Retrieve a music hall list
+@app.get("/music-halls-list/", tags=["Music Hall Management"])
+async def fetch_music_hall_list():
+    try:
+        # Call the helper function to get the hall
+        hall_list = get_music_hall_list()
+        return hall_list
+    except HTTPException as e:
+        raise e
 
 
 # Retrieve a music hall by ID

@@ -27,6 +27,10 @@ FETCH_HALL_SQL = """
     SELECT id, city, hall_name, email, stage, pipe_height, stage_type FROM music_halls WHERE id = %s
 """
 
+FETCH_HALL_LIST_SQL = """
+    SELECT id, CONCAT(city, ', ', hall_name) AS hall_info FROM music_halls;
+"""
+
 DELETE_HALL_SQL = """
    DELETE FROM music_halls WHERE id = %s RETURNING id
 """
@@ -99,6 +103,32 @@ def update_music_hall(hall_id: int, updates: dict):
         return {"message": "Music hall updated successfully"}
     except Exception as e:
         conn.rollback()
+        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_music_hall_list():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Query the database
+        cursor.execute(FETCH_HALL_LIST_SQL)
+        results = cursor.fetchall()
+
+        # If no results found
+        if not results:
+            raise HTTPException(status_code=404, detail="No halls found")
+
+        # Map results to a list of dictionaries
+        hall_list = [
+            {"id": row[0], "city_and_hall_name": row[1]} for row in results
+        ]
+        return hall_list
+
+    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
     finally:
         cursor.close()
