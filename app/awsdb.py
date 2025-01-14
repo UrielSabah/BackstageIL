@@ -1,5 +1,7 @@
 import boto3
 from app.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, REGION_NAME, BUCKET_NAME
+from botocore.exceptions import NoCredentialsError, PartialCredentialsError
+import logging
 
 s3_resource = boto3.resource(
     's3',
@@ -15,3 +17,19 @@ def get_bucket_list():
         return {"buckets": buckets}
     except Exception as e:
         raise Exception(f"Failed to retrieve URL: {e}")
+
+
+def get_presigned_url(key: str, expiration: int = 3600) -> str:
+    try:
+        response = s3_resource.meta.client.generate_presigned_url(
+            'get_object',
+            Params={'Bucket': BUCKET_NAME, 'Key': key},
+            ExpiresIn=expiration
+        )
+        return response
+    except (NoCredentialsError, PartialCredentialsError) as e:
+        logging.error(f"Credentials error: {e}")
+        raise
+    except Exception as e:
+        logging.error(f"Error generating pre-signed URL: {e}")
+        raise

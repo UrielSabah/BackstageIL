@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
 from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
 from fastapi.responses import FileResponse
-from app.awsdb import get_bucket_list
+from app.awsdb import get_bucket_list, get_presigned_url
 import os
 from app.config import SECRET_KEY
 
@@ -49,13 +49,25 @@ async def serve_ads_txt():
 '''
 
 
-@app.get("/check-aws-connection/")
+@app.get("/get-bucket-list/")
 def check_aws_connection():
-    """Check AWS S3 connection by listing buckets."""
     try:
         return get_bucket_list()
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to connect to AWS S3: {e}")
+
+
+@app.get("/music-halls/{hall_id}/pictures/{file_name}")
+async def get_picture(hall_id: int, file_name: str):
+    try:
+        key = f"music-halls:{hall_id}:{file_name}.JPG"
+        url = get_presigned_url(key=key)
+        if url:
+            return {"url": url}
+        else:
+            raise HTTPException(status_code=404, detail="Picture not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 '''
