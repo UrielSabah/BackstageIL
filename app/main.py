@@ -1,12 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import validators
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
 from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
 from fastapi.responses import FileResponse
 from app.awsdb import get_bucket_list, get_presigned_url
 import os
 from app.config import SECRET_KEY
+
 
 # Define the FastAPI app
 app = FastAPI(
@@ -60,6 +62,8 @@ def check_aws_connection():
 @app.get("/music-halls/{hall_id}/pictures/{file_name}")
 async def get_picture(hall_id: int, file_name: str):
     try:
+        if not validators.validate_all_inputs_as_integers(hall_id, file_name):
+            raise HTTPException(status_code=422, detail=validators.RAISE_422)
         key = f"music-halls:{hall_id}:{file_name}.JPG"
         url = get_presigned_url(key=key)
         if url:
@@ -86,19 +90,21 @@ async def fetch_music_hall_list():
         # Call the helper function to get the hall
         hall_list = get_music_hall_list()
         return hall_list
-    except HTTPException as e:
-        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Retrieve a music hall by ID
 @app.get("/music-halls/{hall_id}", response_model=MusicHall, tags=["Music Hall Management"])
 async def fetch_music_hall(hall_id: int):
     try:
+        if not validators.validate_all_inputs_as_integers(hall_id):
+            raise HTTPException(status_code=422, detail=validators.RAISE_422)
         # Call the helper function to get the hall
         hall = get_music_hall(hall_id)
         return hall
-    except HTTPException as e:
-        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # Endpoint to create a new music hall
@@ -124,15 +130,17 @@ async def create_music_hall(hall: MusicHall, api_key: str = Depends(verify_api_k
             "pipe_height": hall.pipe_height,
             "stage_type": hall.stage_type,
         }
-    except HTTPException as e:
-        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.put("/music-halls/{hall_id}", tags=["Music Hall Management"])
 async def update_hall(hall_id: int, hall_data: UpdateMusicHall, api_key: str = Depends(verify_api_key)):
     # Filter out None values from the input
     try:
+        if not validators.validate_all_inputs_as_integers(hall_id):
+            raise HTTPException(status_code=422, detail=validators.RAISE_422)
         updates = hall_data.dict(exclude_unset=True)
         return update_music_hall(hall_id, updates)
-    except HTTPException as e:
-        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

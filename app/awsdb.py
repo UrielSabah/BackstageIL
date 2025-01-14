@@ -3,6 +3,7 @@ from app.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, REGION_NAME, BU
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 import logging
 
+EXPIRATION_TIME_SECONDS = 180  # 3minutes
 s3_resource = boto3.resource(
     's3',
     aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -19,7 +20,7 @@ def get_bucket_list():
         raise Exception(f"Failed to retrieve URL: {e}")
 
 
-def get_presigned_url(key: str, expiration: int = 3600) -> str:
+def get_presigned_url(key: str, expiration: int = EXPIRATION_TIME_SECONDS) -> str:
     try:
         response = s3_resource.meta.client.generate_presigned_url(
             'get_object',
