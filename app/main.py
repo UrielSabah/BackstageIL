@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Depends, HTTPException, Header
 from fastapi.middleware.cors import CORSMiddleware
+
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
 from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
 from fastapi.responses import FileResponse
+from app.awsdb import get_bucket_list
 import os
 from app.config import SECRET_KEY
-
 
 # Define the FastAPI app
 app = FastAPI(
@@ -41,6 +42,29 @@ async def serve_ads_txt():
     if os.path.exists(file_path):
         return FileResponse(file_path)
     return {"error": "ads.txt not found"}
+
+
+'''
+----->AWS<-----
+'''
+
+
+@app.get("/check-aws-connection/")
+def check_aws_connection():
+    """Check AWS S3 connection by listing buckets."""
+    try:
+        return get_bucket_list()
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to connect to AWS S3: {e}")
+
+
+'''
+----->AWS<-----
+'''
+
+'''
+----->SQL - NEON<-----
+'''
 
 
 # Retrieve a music hall list
