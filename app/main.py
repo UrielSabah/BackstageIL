@@ -5,7 +5,7 @@ from app import validators
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
 from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
 from fastapi.responses import FileResponse
-from app.awsdb import get_bucket_list, get_presigned_url
+from app.awsdb import get_bucket_list, get_presigned_url, get_music_hall_pictures_name_list
 import os
 from app.config import SECRET_KEY
 
@@ -19,7 +19,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (replace '*' with specific URLs if needed)
+    allow_origins=["*"],  # Allow all origins, replace '*' with specific URLs if needed
     allow_credentials=True,
     allow_methods=["GET"],  # Allow all HTTP methods (GET, POST, etc.)
     allow_headers=["*"],  # Allow all headers
@@ -73,6 +73,19 @@ async def get_picture(hall_id: int, file_name: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+@app.get("/music-halls/{hall_id}/pictures")
+async def get_picture_filenames(hall_id: int):
+    try:
+        if not validators.validate_all_inputs_as_integers(hall_id):
+            raise HTTPException(status_code=422, detail=validators.RAISE_422)
+        prefix = f"music-halls:{hall_id}:"
+        filenames = get_music_hall_pictures_name_list(prefix=prefix)
+        if filenames is None:
+            return {"files": []}
+        return {"files": filenames}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 '''
 ----->AWS<-----
