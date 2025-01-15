@@ -21,11 +21,14 @@ def get_bucket_list():
 
 
 def get_music_hall_pictures_name_list(prefix: str):
-    filenames = [
-        obj.key.replace(prefix, "").replace(".JPG", "")
-        for obj in s3_resource.Bucket(BUCKET_NAME).objects.filter(Prefix=prefix) if obj.key != prefix
-    ]
-    return filenames
+    try:
+        filenames = [
+            obj.key.replace(prefix, "").replace(".JPG", "")
+            for obj in s3_resource.Bucket(BUCKET_NAME).objects.filter(Prefix=prefix) if obj.key != prefix
+        ]
+        return filenames
+    except Exception as e:
+        raise Exception(f"Failed to retrieve list names: {e}")
 
 
 def get_presigned_url(key: str, expiration: int = EXPIRATION_TIME_SECONDS) -> str:

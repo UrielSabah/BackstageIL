@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app import validators
 from app.models import MusicHall, UpdateMusicHall  # Import the Pydantic model
-from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list
+from app.neondb import insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list, get_music_hall_recommendations
 from fastapi.responses import FileResponse
 from app.awsdb import get_bucket_list, get_presigned_url, get_music_hall_pictures_name_list
 import os
@@ -51,7 +51,7 @@ async def serve_ads_txt():
 '''
 
 
-@app.get("/get-bucket-list/")
+@app.get("/get-bucket-list/" , tags=["Music Hall Management"])
 def check_aws_connection():
     try:
         return get_bucket_list()
@@ -59,7 +59,7 @@ def check_aws_connection():
         raise HTTPException(status_code=500, detail=f"Failed to connect to AWS S3: {e}")
 
 
-@app.get("/music-halls/{hall_id}/pictures/{file_name}")
+@app.get("/music-halls/{hall_id}/pictures/{file_name}" , tags=["Music Hall Management"])
 async def get_picture(hall_id: int, file_name: str):
     try:
         if not validators.validate_all_inputs_as_integers(hall_id, file_name):
@@ -74,7 +74,7 @@ async def get_picture(hall_id: int, file_name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-@app.get("/music-halls/{hall_id}/pictures")
+@app.get("/music-halls/{hall_id}/pictures" , tags=["Music Hall Management"])
 async def get_picture_filenames(hall_id: int):
     try:
         if not validators.validate_all_inputs_as_integers(hall_id):
@@ -155,5 +155,18 @@ async def update_hall(hall_id: int, hall_data: UpdateMusicHall, api_key: str = D
             raise HTTPException(status_code=422, detail=validators.RAISE_422)
         updates = hall_data.dict(exclude_unset=True)
         return update_music_hall(hall_id, updates)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Retrieve all Recommendations of a music hall by ID
+@app.get("/music-halls/{hall_id}/recommendations", tags=["Music Hall Management"])
+async def fetch_music_hall(hall_id: int):
+    try:
+        if not validators.validate_all_inputs_as_integers(hall_id):
+            raise HTTPException(status_code=422, detail=validators.RAISE_422)
+        # Call the helper function to get the hall
+        recommendations = get_music_hall_recommendations(hall_id)
+        return recommendations
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

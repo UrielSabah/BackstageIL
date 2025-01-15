@@ -1,5 +1,6 @@
 import psycopg2
 from fastapi import HTTPException
+from datetime import datetime
 from app.config import DB_URL
 
 # Neon database connection string
@@ -12,7 +13,7 @@ def get_db_connection():
         conn = psycopg2.connect(DATABASE_URL)
         return conn
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error connecting to database: {e}")
+        raise Exception(f"Neon Error connecting to database: {e}")
 
 
 # SQL query to insert data into the music_halls table
@@ -35,6 +36,10 @@ DELETE_HALL_SQL = """
    DELETE FROM music_halls WHERE id = %s RETURNING id
 """
 
+FETCH_HALL_RECOMMENDATIONS_SQL = """
+    SELECT recommendation, update_date FROM music_hall_recommendations WHERE hall_id = %s order by update_date desc
+"""
+
 
 # Function to insert data into the music_halls table
 def insert_music_hall(data):
@@ -47,7 +52,7 @@ def insert_music_hall(data):
         return inserted_row
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Error inserting data: {e}")
+        raise Exception(f"Neon Internal server error: {e}")
     finally:
         cursor.close()
         conn.close()
@@ -77,7 +82,7 @@ def get_music_hall(hall_id: int):
             "stage_type": result[6]
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise Exception(f"Neon Internal server error: {e}")
     finally:
         cursor.close()
         conn.close()
@@ -103,7 +108,7 @@ def update_music_hall(hall_id: int, updates: dict):
         return {"message": "Music hall updated successfully"}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise Exception(f"Neon Internal server error: {e}")
     finally:
         cursor.close()
         conn.close()
@@ -129,7 +134,31 @@ def get_music_hall_list():
         return hall_list
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal server error: {e}")
+        raise Exception(f"Neon Internal server error: {e}")
+    finally:
+        cursor.close()
+        conn.close()
+
+
+def get_music_hall_recommendations(hall_id: int):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    try:
+        # Query the database
+        cursor.execute(FETCH_HALL_RECOMMENDATIONS_SQL, (hall_id,))
+        results = cursor.fetchall()
+
+        if not results:
+            return None
+
+        # Map results to a list of dictionaries
+        hall_list_recommendations = [
+            {"update_date": row[1].date(), "recommendation": row[0], } for row in results
+        ]
+        return hall_list_recommendations
+    except Exception as e:
+        raise Exception(f"Neon Internal server error: {e}")
     finally:
         cursor.close()
         conn.close()
