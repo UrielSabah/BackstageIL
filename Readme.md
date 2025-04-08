@@ -5,9 +5,9 @@ Auto-generated docs at:
    ReDoc: http://127.0.0.1:8000/redoc
 ```
 
-#### The CSV created is the original input, the dataframe calculation is printed on the terminal when run the main.py file
+#### About
 
-The API allows you to retrieve flight information, add new flights, and update existing flight information.
+The API allows you to retrieve information about music halls
 
 ## Features
 
