@@ -27,7 +27,6 @@ Auto-generated interactive docs:
 - **Python 3.10+**
 - **FastAPI** (ASGI framework)
 - **Uvicorn** (server)
-- **SQLAlchemy** (ORM)
 - **PostgreSQL** (via Neon)
 - **AWS S3** for image uploads
 - **Render** for deployment
