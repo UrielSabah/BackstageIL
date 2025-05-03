@@ -1,42 +1,60 @@
-# Readme
-Auto-generated docs at:
-```
-   Swagger UI: http://127.0.0.1:8000/docs
-   ReDoc: http://127.0.0.1:8000/redoc
-```
+# 🎭 BackstageIL API
 
-#### About
+A FastAPI-based backend that manages information about music halls, including creation, retrieval, and updating of hall records. Built with Python, PostgreSQL (via Neon), and deployed to Render, with media storage via AWS S3.
 
-The API allows you to retrieve information about music halls
+## 📚 Documentation
 
-## Features
+Auto-generated interactive docs:
+- [Swagger UI](http://127.0.0.1:8000/docs)
+- [ReDoc](http://127.0.0.1:8000/redoc)
 
-- **GET**: Retrieve hall information by hall_id.
-- **POST**: Add a new hall.
-- **PUT**: Update an existing hall.
+---
 
-## Prerequisites
-Make sure you have the following installed:
-- I used: Python 3.13
+## 🚀 Features
 
-## Installation
-Install FastAPI and an ASGI server (e.g., Uvicorn):
-```
-    pip install fastapi uvicorn
-```
+- **GET**: Retrieve music hall information by ID.
+- **POST**: Add new music hall entries.
+- **PUT**: Update existing music halls.
+- AWS S3 image integration (via `boto3`)
+- Connected to Neon (PostgreSQL in the cloud)
+- Modular FastAPI architecture
+- Includes unit tests
+
+---
+
+## 🛠️ Tech Stack
+
+- **Python 3.10+**
+- **FastAPI** (ASGI framework)
+- **Uvicorn** (server)
+- **SQLAlchemy** (ORM)
+- **PostgreSQL** (via Neon)
+- **AWS S3** for image uploads
+- **Render** for deployment
+
+---
+
+## ⚙️ Installation
+
 Clone the repository to your local machine:
 
 - git clone https://github.com/UrielSabah/BackstageIL.git
 
+Create a virtual environment and activate it:
+```
+python -m venv env
+source env/bin/activate 
+```
+
 Install the required dependencies:
-- pip3 install -r requirements.txt
+- pip install -r requirements.txt
 
 ## Running the API
-Start the FastAPI server locally:
+Start the development server:
+
 ```
     uvicorn app.main:app --reload
 ```
-
 The API will be available at http://127.0.0.1:8000/.
 
 ## API Endpoints
