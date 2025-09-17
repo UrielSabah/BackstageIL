@@ -1,7 +1,9 @@
 from fastapi import HTTPException, Header
 from app.config import SECRET_KEY
+from functools import lru_cache
 
 
+@lru_cache()
 def verify_api_key(api_key: str = Header(...)):
     valid_api_key = SECRET_KEY
     if api_key != valid_api_key:
