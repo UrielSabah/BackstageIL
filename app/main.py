@@ -1,7 +1,9 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import api_router
-from fastapi.responses import ORJSONResponse
+from fastapi.responses import ORJSONResponse, FileResponse
+from pathlib import Path
+
 
 app = FastAPI(
     title="BackstageIL API",
@@ -20,3 +22,6 @@ app.add_middleware(
 
 app.include_router(api_router)
 
+@app.get("/ads.txt", include_in_schema=False)
+async def ads():
+    return FileResponse(Path("static/ads.txt"))
