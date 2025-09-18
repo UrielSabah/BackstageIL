@@ -1,164 +1,108 @@
-import psycopg2
 from fastapi import HTTPException
-from datetime import datetime
 from app.config import DB_URL
+import asyncpg
 
-# Neon database connection string
+
 DATABASE_URL = DB_URL
-
-
-# Function to get a database connection
-def get_db_connection():
-    try:
-        conn = psycopg2.connect(DATABASE_URL)
-        return conn
-    except Exception as e:
-        raise Exception(f"Neon Error connecting to database: {e}")
 
 
 # SQL query to insert data into the music_halls table
 INSERT_HALL_SQL = """
 INSERT INTO music_halls (
     city, hall_name, email, stage, pipe_height, stage_type
-) VALUES (%s, %s, %s, %s, %s, %s)
+) VALUES ($1, $2, $3, $4, $5, $6)
 RETURNING id, city, hall_name;
 """
 
 FETCH_HALL_SQL = """
-    SELECT id, city, hall_name, email, stage, pipe_height, stage_type FROM music_halls WHERE id = %s
+    SELECT id, city, hall_name, email, stage, pipe_height, stage_type FROM music_halls WHERE id = $1
+"""
+
+DELETE_HALL_SQL = """
+   DELETE FROM music_halls WHERE id = $1 RETURNING id
+"""
+
+FETCH_HALL_RECOMMENDATIONS_SQL = """
+    SELECT recommendation, update_date FROM music_hall_recommendations WHERE hall_id = $1 order by update_date desc
 """
 
 FETCH_HALL_LIST_SQL = """
     SELECT id, CONCAT(city, ', ', hall_name) AS hall_info FROM music_halls;
 """
 
-DELETE_HALL_SQL = """
-   DELETE FROM music_halls WHERE id = %s RETURNING id
-"""
 
-FETCH_HALL_RECOMMENDATIONS_SQL = """
-    SELECT recommendation, update_date FROM music_hall_recommendations WHERE hall_id = %s order by update_date desc
-"""
-
-
-# Function to insert data into the music_halls table
-def insert_music_hall(data):
-    conn = get_db_connection()
-    cursor = conn.cursor()
+async def get_music_hall_list():
+    conn = await asyncpg.connect(DB_URL)
     try:
-        cursor.execute(INSERT_HALL_SQL, data)
-        conn.commit()
-        inserted_row = cursor.fetchone()  # Fetch the inserted row (id, city, hall_name)
-        return inserted_row
-    except Exception as e:
-        conn.rollback()
-        raise Exception(f"Neon Internal server error: {e}")
-    finally:
-        cursor.close()
-        conn.close()
-
-
-def get_music_hall(hall_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        # Query the database
-        cursor.execute(FETCH_HALL_SQL, (hall_id,))
-        result = cursor.fetchone()
-
-        # If the row does not exist
-        if not result:
-            raise HTTPException(status_code=404, detail="Music hall not found")
-
-        # Return a dictionary matching the Pydantic model
-        return {
-            "id": result[0],
-            "city": result[1],
-            "hall_name": result[2],
-            "email": result[3],
-            "stage": result[4],
-            "pipe_height": result[5],
-            "stage_type": result[6]
-        }
-    except Exception as e:
-        raise Exception(f"Neon Internal server error: {e}")
-    finally:
-        cursor.close()
-        conn.close()
-
-
-def update_music_hall(hall_id: int, updates: dict):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        # Prepare the update query dynamically
-        set_clause = ", ".join(f"{key} = %s" for key in updates.keys())
-        query = f"UPDATE music_halls SET {set_clause} WHERE id = %s RETURNING id"
-        values = list(updates.values()) + [hall_id]
-
-        cursor.execute(query, values)
-        updated_row = cursor.fetchone()
-        conn.commit()
-
-        if not updated_row:
-            raise HTTPException(status_code=404, detail="Music hall not found")
-
-        return {"message": "Music hall updated successfully"}
-    except Exception as e:
-        conn.rollback()
-        raise Exception(f"Neon Internal server error: {e}")
-    finally:
-        cursor.close()
-        conn.close()
-
-
-def get_music_hall_list():
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
-    try:
-        # Query the database
-        cursor.execute(FETCH_HALL_LIST_SQL)
-        results = cursor.fetchall()
-
-        # If no results found
+        results = await conn.fetch(FETCH_HALL_LIST_SQL)
         if not results:
             raise HTTPException(status_code=404, detail="No halls found")
 
-        # Map results to a list of dictionaries
         hall_list = [
             {"id": row[0], "city_and_hall_name": row[1]} for row in results
         ]
         return hall_list
 
-    except Exception as e:
-        raise Exception(f"Neon Internal server error: {e}")
     finally:
-        cursor.close()
-        conn.close()
+        await conn.close()
 
 
-def get_music_hall_recommendations(hall_id: int):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-
+async def get_music_hall(hall_id: int):
+    conn = await asyncpg.connect(DB_URL)
     try:
-        # Query the database
-        cursor.execute(FETCH_HALL_RECOMMENDATIONS_SQL, (hall_id,))
-        results = cursor.fetchall()
+        result = await conn.fetchrow(FETCH_HALL_SQL, hall_id)
+        if not result:
+            raise HTTPException(status_code=404, detail="Music hall not found")
+        return dict(result)
+    finally:
+        await conn.close()
 
+
+async def insert_music_hall(data: tuple):
+    conn = await asyncpg.connect(DB_URL)
+    try:
+        inserted_row = await conn.fetchrow(INSERT_HALL_SQL, *data)
+        return dict(inserted_row)
+    finally:
+        await conn.close()
+
+
+async def update_music_hall(hall_id: int, updates: dict) -> dict:
+    if not updates:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    # Build dynamic query using $1, $2, ... placeholders
+    set_clause = ", ".join(f"{key} = ${i+1}" for i, key in enumerate(updates.keys()))
+    values = list(updates.values()) + [hall_id]  # hall_id is last placeholder
+
+    query = f"""
+        UPDATE music_halls
+        SET {set_clause}
+        WHERE id = ${len(values)}
+        RETURNING id, city, hall_name, email, stage, pipe_height, stage_type;
+    """
+
+    conn = await asyncpg.connect(DB_URL)
+    try:
+        updated_row = await conn.fetchrow(query, *values)
+        if not updated_row:
+            raise HTTPException(status_code=404, detail="Music hall not found")
+        return dict(updated_row)
+    finally:
+        await conn.close()
+
+
+async def get_music_hall_recommendations(hall_id: int):
+    conn = await asyncpg.connect(DB_URL)
+    try:
+        results = await conn.fetch(FETCH_HALL_RECOMMENDATIONS_SQL, hall_id)
         if not results:
-            return None
+            return []
 
-        # Map results to a list of dictionaries
         hall_list_recommendations = [
-            {"update_date": row[1].date(), "recommendation": row[0], } for row in results
+             {"update_date": row[1].date(), "recommendation": row[0], } for row in results
         ]
         return hall_list_recommendations
-    except Exception as e:
-        raise Exception(f"Neon Internal server error: {e}")
     finally:
-        cursor.close()
-        conn.close()
+        await conn.close()
+

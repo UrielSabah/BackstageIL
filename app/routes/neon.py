@@ -14,7 +14,7 @@ router = APIRouter(prefix="/db", tags=["Music Hall Management"])
 async def fetch_music_hall_list():
     try:
         # Call the helper function to get the hall
-        hall_list = get_music_hall_list()
+        hall_list = await get_music_hall_list()
         return hall_list
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -26,15 +26,15 @@ async def fetch_music_hall(hall_id: int):
     try:
         if not validators.validate_all_inputs_as_integers(hall_id):
             raise HTTPException(status_code=422, detail=validators.RAISE_422)
-        # Call the helper function to get the hall
-        hall = get_music_hall(hall_id)
+
+        hall = await get_music_hall(hall_id)
         return hall
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 
 # Endpoint to create a new music hall
-@router.post("/music-halls/", response_model=MusicHall, tags=["Music Hall Management"])
+@router.post("/music-halls/", tags=["Music Hall Management"])
 async def create_music_hall(hall: MusicHall, api_key: str = Depends(verify_api_key)):
     # Prepare data tuple for database insertion
     hall_data = (
@@ -46,11 +46,11 @@ async def create_music_hall(hall: MusicHall, api_key: str = Depends(verify_api_k
         hall.stage_type
     )
     try:
-        inserted_row = insert_music_hall(hall_data)  # Insert the data into the database
+        inserted_row = await insert_music_hall(hall_data)  # Insert the data into the database
         return {
-            "id": inserted_row[0],
-            "city": inserted_row[1],
-            "hall_name": inserted_row[2],
+            "id": inserted_row["id"],
+            "city": inserted_row["city"],
+            "hall_name": inserted_row["hall_name"],
             "email": hall.email,
             "stage": hall.stage,
             "pipe_height": hall.pipe_height,
@@ -66,8 +66,8 @@ async def update_hall(hall_id: int, hall_data: UpdateMusicHall, api_key: str = D
     try:
         if not validators.validate_all_inputs_as_integers(hall_id):
             raise HTTPException(status_code=422, detail=validators.RAISE_422)
-        updates = hall_data.model_dump(exclude_unset=True)
-        return update_music_hall(hall_id, updates)
+        updates =  hall_data.model_dump(exclude_unset=True)
+        return await update_music_hall(hall_id, updates)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -79,7 +79,7 @@ async def fetch_music_hall_recommendations(hall_id: int):
         if not validators.validate_all_inputs_as_integers(hall_id):
             raise HTTPException(status_code=422, detail=validators.RAISE_422)
         # Call the helper function to get the hall
-        recommendations = get_music_hall_recommendations(hall_id)
+        recommendations = await get_music_hall_recommendations(hall_id)
         return recommendations
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
