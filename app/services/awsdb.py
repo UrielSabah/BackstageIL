@@ -1,16 +1,17 @@
 import boto3
-from app.config import AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, REGION_NAME, BUCKET_NAME
+from app.core.config import settings
 from botocore.exceptions import NoCredentialsError, PartialCredentialsError
 import logging
 
 EXPIRATION_TIME_SECONDS = 180  # 3minutes
 s3_resource = boto3.resource(
     's3',
-    aws_access_key_id=AWS_ACCESS_KEY_ID,
-    aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-    region_name=REGION_NAME
+    aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+    aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+    region_name=settings.REGION_NAME
 )
 
+BUCKET_NAME = settings.BUCKET_NAME
 
 def get_bucket_list():
     try:

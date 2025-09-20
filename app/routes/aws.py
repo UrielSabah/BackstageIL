@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
-from app.db.awsdb import get_bucket_list, get_presigned_url, get_music_hall_pictures_name_list
-from app import validators
+from app.services.awsdb import get_bucket_list, get_presigned_url, get_music_hall_pictures_name_list
+from app.core import validators
 
 router = APIRouter(prefix="/storage", tags=["Music Hall Management"])
 
