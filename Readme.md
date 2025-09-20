@@ -59,7 +59,7 @@ The API will be available at http://127.0.0.1:8000/.
 ## API Endpoints
 #### 1. Retrieve MusicHall(GET)
 ```
-  GET http://127.0.0.1:8000/music-halls/<hall_id>
+  GET http://127.0.0.1:8000/db/music-halls/<hall_id>
 ```
 
 | Parameter | Type  | Description                        |
@@ -70,7 +70,7 @@ This endpoint retrieves information about a specific hall by its hall_id.
 
 Example Request:
 ```
-  GET http://127.0.0.1:8000/music-halls/5
+  GET http://127.0.0.1:8000/db/music-halls/5
 ```
 
 Example Response:
@@ -81,7 +81,7 @@ Example Response:
 
 #### 2. Add a new Music Hall (POST) 
 ```
-  POST http://127.0.0.1:8000/music-halls/
+  POST http://127.0.0.1:8000/db/music-halls/
 ```
 
 This endpoint allows you to add a new hall 
@@ -100,7 +100,7 @@ Example Response (for new Hall):
 
 #### 3. Update an existing Music Hall (PUT) 
 ```
-  PUT http://127.0.0.1:8000/music-halls//<hall_id>
+  PUT http://127.0.0.1:8000/db/music-halls//<hall_id>
 ```
 
 This endpoint allows you to update an existing hall 
