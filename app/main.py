@@ -1,17 +1,23 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import api_router
 from fastapi.responses import ORJSONResponse, FileResponse
 from pathlib import Path
 from contextlib import asynccontextmanager
+
+from app.routes import api_router
 from app.db.neondb import init_db_pool, close_db_pool
+from app.db.awsdb import init_aws,close_aws
 
 
 @asynccontextmanager
-async def lifespan(app: FastAPI):
-    await init_db_pool(app)
+async def lifespan(fastapi_app: FastAPI):
+    await init_db_pool(fastapi_app)
+    await init_aws()
+
     yield
-    await close_db_pool(app)
+
+    await close_aws()
+    await close_db_pool(fastapi_app)
 
 
 app = FastAPI(
@@ -25,10 +31,10 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins, replace '*' with specific URLs if needed
+    allow_origins=["*"],  #todo: Replace '*' with allowed origins in prod
     allow_credentials=True,
-    allow_methods=["GET"],  # Allow all HTTP methods (GET, POST, etc.)
-    allow_headers=["*"],  # Allow all headers
+    allow_methods=["GET"],
+    allow_headers=["*"],
 )
 
 app.include_router(api_router)
