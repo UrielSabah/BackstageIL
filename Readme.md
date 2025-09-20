@@ -15,7 +15,7 @@ Auto-generated interactive docs:
 - **GET**: Retrieve music hall information by ID.
 - **POST**: Add new music hall entries.
 - **PUT**: Update existing music halls.
-- AWS S3 image integration (via `boto3`)
+- AWS S3 image integration (via `aioboto3`)
 - Connected to Neon (PostgreSQL in the cloud)
 - Modular FastAPI architecture
 - Includes unit tests
@@ -24,7 +24,7 @@ Auto-generated interactive docs:
 
 ## 🛠️ Tech Stack
 
-- **Python 3.10+**
+- **Python 3.13**
 - **FastAPI** (ASGI framework)
 - **Uvicorn** (server)
 - **PostgreSQL** (via Neon)
