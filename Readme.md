@@ -18,7 +18,7 @@ Auto-generated interactive docs:
 - AWS S3 image integration (via `aioboto3`)
 - Connected to Neon (PostgreSQL in the cloud)
 - Modular FastAPI architecture
-- Includes unit tests
+- Includes unit tests with Pytest
 
 ---
 
@@ -75,7 +75,14 @@ Example Request:
 
 Example Response:
 ```
-
+{
+    "city": "Ashdod",
+    "hall_name": "Mamila 1",
+    "email": "mamila@example.com",
+    "stage": true,
+    "pipe_height": 14,
+    "stage_type": "raised"
+}
 ```
 ###
 
@@ -100,7 +107,7 @@ Example Response (for new Hall):
 
 #### 3. Update an existing Music Hall (PUT) 
 ```
-  PUT http://127.0.0.1:8000/db/music-halls//<hall_id>
+  PUT http://127.0.0.1:8000/db/music-halls/<hall_id>
 ```
 
 This endpoint allows you to update an existing hall 
@@ -119,7 +126,7 @@ Example Response (for updated Hall):
 ## Run Tests
 You can run the tests by executing the test_app.py file:
 ```
-python -m unittest discover tests/
+ PYTHONPATH=. pytest tests/test_main.py -v
 ```
 
 

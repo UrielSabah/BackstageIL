@@ -1,4 +1,4 @@
-from pydantic import BaseModel , Field, EmailStr
+from pydantic import BaseModel , Field, EmailStr, ConfigDict
 from enum import Enum
 from typing import Optional
 
@@ -16,9 +16,9 @@ class MusicHall(BaseModel):
     pipe_height: int = Field(..., ge=0, le=100, description="Height of the stage pipes in meters")
     stage_type: StageType = Field(...,  description="Type of stage")
 
-    class Config:
-        from_attributes = True
-        json_schema_extra = {
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
             "example": {
                 "city": "Tel Aviv",
                 "hall_name": "Barby",
@@ -28,6 +28,7 @@ class MusicHall(BaseModel):
                 "stage_type": "raised"
             }
         }
+    )
 
 class UpdateMusicHall(BaseModel):
     city: Optional[str] = Field(None, min_length=2, max_length=100)
@@ -37,5 +38,6 @@ class UpdateMusicHall(BaseModel):
     pipe_height: Optional[int] = Field(None, ge=0, le=100)
     stage_type: Optional[StageType] = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(
+        from_attributes=True
+    )
