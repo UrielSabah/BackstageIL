@@ -1,0 +1,25 @@
+# Local development using Neon (cloud DB). For production, deploy the Dockerfile to Render.
+#
+# Usage:
+#   docker compose up --build
+#   API: http://localhost:10000   Docs: http://localhost:10000/docs
+#
+# Set DB_URL and SECRET_KEY in .env (e.g. Neon connection string).
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${PORT:-10000}:10000"
+    env_file:
+      - .env
+    environment:
+      PORT: "10000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:10000/health/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s

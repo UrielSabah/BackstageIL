@@ -1,88 +1,151 @@
-from fastapi import HTTPException
-import asyncpg
-
-
-# SQL query to insert data into the music_halls table
-INSERT_HALL_SQL = """
-INSERT INTO music_halls (
-    city, hall_name, email, stage, pipe_height, stage_type
-) VALUES ($1, $2, $3, $4, $5, $6)
-RETURNING id, city, hall_name;
 """
-
-FETCH_HALL_SQL = """
-    SELECT id, city, hall_name, email, stage, pipe_height, stage_type FROM music_halls WHERE id = $1
+Music hall domain services using SQLAlchemy async session (Neon PostgreSQL).
 """
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-DELETE_HALL_SQL = """
-   DELETE FROM music_halls WHERE id = $1 RETURNING id
-"""
+from app.core.exceptions import (
+    MusicHallNotFoundError,
+    MusicHallListEmptyError,
+    NoFieldsToUpdateError,
+    InvalidUpdateFieldsError,
+)
+from app.db.models import MusicHallModel, MusicHallRecommendationModel
+from app.schemas.neon import MusicHall
 
-FETCH_HALL_RECOMMENDATIONS_SQL = """
-    SELECT recommendation, update_date FROM music_hall_recommendations WHERE hall_id = $1 order by update_date desc
-"""
-
-FETCH_HALL_LIST_SQL = """
-    SELECT id, CONCAT(city, ', ', hall_name) AS hall_info FROM music_halls;
-"""
-
-async def get_music_hall_list(db_pool: asyncpg.Pool):
-    async with db_pool.acquire() as conn:
-        results = await conn.fetch(FETCH_HALL_LIST_SQL)
-
-        if not results:
-            raise HTTPException(status_code=404, detail="No halls found")
-
-        hall_list = [
-            {"id": row[0], "city_and_hall_name": row[1]} for row in results
-        ]
-        return hall_list
+# Allowed columns for updates (whitelist to prevent SQL injection)
+ALLOWED_UPDATE_COLUMNS = {
+    "city", "hall_name", "email", "stage", "pipe_height", "stage_type"
+}
 
 
-async def get_music_hall(hall_id: int, db_pool: asyncpg.Pool):
-    async with db_pool.acquire() as conn:
-        result = await conn.fetchrow(FETCH_HALL_SQL, hall_id)
-        if not result:
-            raise HTTPException(status_code=404, detail="Music hall not found")
-        return dict(result)
-
-
-async def insert_music_hall(data: tuple, db_pool: asyncpg.Pool):
-    async with db_pool.acquire() as conn:
-        inserted_row = await conn.fetchrow(INSERT_HALL_SQL, *data)
-        return dict(inserted_row)
-
-
-async def update_music_hall(hall_id: int, updates: dict, db_pool: asyncpg.Pool) -> dict:
-    if not updates:
-        raise HTTPException(status_code=400, detail="No fields to update")
-
-    # Build dynamic query using $1, $2, ... placeholders
-    set_clause = ", ".join(f"{key} = ${i+1}" for i, key in enumerate(updates.keys()))
-    values = list(updates.values()) + [hall_id]  # hall_id is last placeholder
-
-    query = f"""
-        UPDATE music_halls
-        SET {set_clause}
-        WHERE id = ${len(values)}
-        RETURNING id, city, hall_name, email, stage, pipe_height, stage_type;
+async def get_music_hall_list(session: AsyncSession) -> list[dict]:
     """
+    Retrieve a list of all music halls (id and city_and_hall_name).
 
-    async with db_pool.acquire() as conn:
-        updated_row = await conn.fetchrow(query, *values)
-        if not updated_row:
-            raise HTTPException(status_code=404, detail="Music hall not found")
-        return dict(updated_row)
+    Raises:
+        MusicHallListEmptyError: If no music halls are found in the database.
+    """
+    result = await session.execute(
+        select(MusicHallModel.id, MusicHallModel.city, MusicHallModel.hall_name)
+    )
+    rows = result.all()
+    if not rows:
+        raise MusicHallListEmptyError()
+    return [
+        {
+            "id": r.id,
+            "city_and_hall_name": f"{r.city}, {r.hall_name}",
+        }
+        for r in rows
+    ]
 
 
-async def get_music_hall_recommendations(hall_id: int, db_pool: asyncpg.Pool):
-    async with db_pool.acquire() as conn:
-        results = await conn.fetch(FETCH_HALL_RECOMMENDATIONS_SQL, hall_id)
-        if not results:
-            return []
+async def get_music_hall(hall_id: int, session: AsyncSession) -> dict:
+    """
+    Retrieve a music hall by its ID.
 
-        hall_list_recommendations = [
-             {"update_date": row[1].date(), "recommendation": row[0], } for row in results
-        ]
-        return hall_list_recommendations
+    Raises:
+        MusicHallNotFoundError: If the music hall with the given ID does not exist.
+    """
+    result = await session.execute(
+        select(MusicHallModel).where(MusicHallModel.id == hall_id)
+    )
+    hall = result.scalar_one_or_none()
+    if hall is None:
+        raise MusicHallNotFoundError(hall_id)
+    return hall.to_dict()
 
+
+async def insert_music_hall(session: AsyncSession, hall: MusicHall) -> dict:
+    """
+    Insert a new music hall.
+
+    Args:
+        session: Async SQLAlchemy session.
+        hall: Pydantic MusicHall model (request body).
+
+    Returns:
+        Inserted row as dict with id, city, hall_name, email, stage, pipe_height, stage_type.
+    """
+    stage_type_val = hall.stage_type.value if hasattr(hall.stage_type, "value") else hall.stage_type
+    model = MusicHallModel(
+        city=hall.city,
+        hall_name=hall.hall_name,
+        email=hall.email,
+        stage=hall.stage,
+        pipe_height=hall.pipe_height,
+        stage_type=stage_type_val,
+    )
+    session.add(model)
+    await session.flush()
+    return model.to_dict()
+
+
+async def update_music_hall(
+    hall_id: int,
+    updates: dict,
+    session: AsyncSession,
+) -> dict:
+    """
+    Update an existing music hall.
+
+    Raises:
+        NoFieldsToUpdateError: If updates is empty.
+        InvalidUpdateFieldsError: If any key is not in ALLOWED_UPDATE_COLUMNS.
+        MusicHallNotFoundError: If the music hall does not exist.
+    """
+    if not updates:
+        raise NoFieldsToUpdateError()
+
+    invalid_columns = set(updates.keys()) - ALLOWED_UPDATE_COLUMNS
+    if invalid_columns:
+        raise InvalidUpdateFieldsError(invalid_columns)
+
+    result = await session.execute(
+        select(MusicHallModel).where(MusicHallModel.id == hall_id)
+    )
+    hall = result.scalar_one_or_none()
+    if hall is None:
+        raise MusicHallNotFoundError(hall_id)
+
+    for key, value in updates.items():
+        if hasattr(value, "value"):  # enum
+            setattr(hall, key, value.value)
+        else:
+            setattr(hall, key, value)
+    await session.flush()
+    return hall.to_dict()
+
+
+async def get_music_hall_recommendations(
+    hall_id: int,
+    session: AsyncSession,
+) -> list[dict]:
+    """
+    Retrieve recommendations for a music hall, newest first.
+    """
+    result = await session.execute(
+        select(MusicHallRecommendationModel)
+        .where(MusicHallRecommendationModel.hall_id == hall_id)
+        .order_by(MusicHallRecommendationModel.update_date.desc())
+    )
+    recommendations = result.scalars().all()
+    return [r.to_dict() for r in recommendations]
+
+
+async def delete_music_hall(hall_id: int, session: AsyncSession) -> None:
+    """
+    Delete a music hall by ID.
+
+    Raises:
+        MusicHallNotFoundError: If the music hall does not exist.
+    """
+    result = await session.execute(
+        select(MusicHallModel).where(MusicHallModel.id == hall_id)
+    )
+    hall = result.scalar_one_or_none()
+    if hall is None:
+        raise MusicHallNotFoundError(hall_id)
+    await session.delete(hall)
+    await session.flush()

@@ -1,134 +1,113 @@
 # 🎭 BackstageIL API
 
-A FastAPI-based backend that manages information about music halls, including creation, retrieval, and updating of hall records. Built with Python, PostgreSQL (via Neon), and deployed to Render, with media storage via AWS S3.
+FastAPI backend for music hall information: CRUD, list, and recommendations. Uses **PostgreSQL (Neon)** and **Render** for deployment.
 
-## 📚 Documentation
+## 📚 Docs
 
-Auto-generated interactive docs:
-- [Swagger UI](http://127.0.0.1:8000/docs)
-- [ReDoc](http://127.0.0.1:8000/redoc)
+- **Swagger UI:** http://127.0.0.1:8000/docs  
+- **ReDoc:** http://127.0.0.1:8000/redoc  
 
 ---
 
 ## 🚀 Features
 
-- **GET**: Retrieve music hall information by ID.
-- **POST**: Add new music hall entries.
-- **PUT**: Update existing music halls.
-- AWS S3 image integration (via `aioboto3`)
-- Connected to Neon (PostgreSQL in the cloud)
-- Modular FastAPI architecture
-- Includes unit tests with Pytest
+- **Music halls:** list, get by ID, create, update, delete
+- **Recommendations:** get recommendations per hall
+- **Auth:** API key (e.g. `X-API-Key` header) for create/update/delete
+- **Health:** `GET /health/`
 
 ---
 
-## 🛠️ Tech Stack
+## 🛠️ Stack
 
-- **Python 3.13**
-- **FastAPI** (ASGI framework)
-- **Uvicorn** (server)
-- **PostgreSQL** (via Neon)
-- **AWS S3** for image uploads
-- **Render** for deployment
+- Python 3.13
+- FastAPI, Uvicorn
+- SQLAlchemy 2 (async) + asyncpg
+- PostgreSQL (Neon)
+- Render (Docker)
 
 ---
 
-## ⚙️ Installation
+## ⚙️ Setup
 
-Clone the repository to your local machine:
+**Clone and venv:**
 
-- git clone https://github.com/UrielSabah/BackstageIL.git
-
-Create a virtual environment and activate it:
-```
-python -m venv env
-source env/bin/activate 
-```
-
-Install the required dependencies:
-- pip install -r requirements.txt
-
-## Running the API
-Start the development server:
-
-```
-    uvicorn app.main:app --reload
-```
-The API will be available at http://127.0.0.1:8000/.
-
-## API Endpoints
-#### 1. Retrieve MusicHall(GET)
-```
-  GET http://127.0.0.1:8000/db/music-halls/<hall_id>
+```bash
+git clone https://github.com/UrielSabah/BackstageIL.git
+cd BackstageIL
+python -m venv .venv
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
 ```
 
-| Parameter | Type  | Description                        |
-|:----------|:------|:-----------------------------------|
-| `hall_id` | `int` | **Required**. Insert hall_id value |
+**Environment:** create a `.env` in the project root with:
 
-This endpoint retrieves information about a specific hall by its hall_id.
+- `DB_URL` – PostgreSQL URL (e.g. Neon; use `?sslmode=require` if required)
+- `SECRET_KEY` – API key for protected endpoints
 
-Example Request:
-```
-  GET http://127.0.0.1:8000/db/music-halls/5
-```
+---
 
-Example Response:
-```
-{
-    "city": "Ashdod",
-    "hall_name": "Mamila 1",
-    "email": "mamila@example.com",
-    "stage": true,
-    "pipe_height": 14,
-    "stage_type": "raised"
-}
-```
-###
+## 🏃 Run
 
-#### 2. Add a new Music Hall (POST) 
-```
-  POST http://127.0.0.1:8000/db/music-halls/
+From the project root:
+
+```bash
+export PYTHONPATH=.
+uvicorn app.main:app --reload
 ```
 
-This endpoint allows you to add a new hall 
+API: http://127.0.0.1:8000  
 
-Example Request:
-```
-```
-Body: 
-```
-```
+---
 
-Example Response (for new Hall):
-```
-```
+## 🐳 Docker
 
+**Local (uses `.env`, e.g. Neon):**
 
-#### 3. Update an existing Music Hall (PUT) 
-```
-  PUT http://127.0.0.1:8000/db/music-halls/<hall_id>
+```bash
+docker compose up --build
 ```
 
-This endpoint allows you to update an existing hall 
+API: http://localhost:10000  
 
-Example Request:
-```
-```
-Body: 
-```
-```
-Example Response (for updated Hall):
-```
+**Production:** use the `Dockerfile` on Render (or any Docker host). Set `DB_URL` and `SECRET_KEY` in the environment.
+
+---
+
+## 📡 API overview
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| GET | `/health/` | No | Health check |
+| GET | `/db/music-halls` | No | List halls (id, city_and_hall_name) |
+| GET | `/db/music-halls/{id}` | No | Get hall by ID |
+| POST | `/db/music-halls` | API key | Create hall |
+| PUT | `/db/music-halls/{id}` | API key | Update hall |
+| DELETE | `/db/music-halls/{id}` | API key | Delete hall |
+| GET | `/db/music-halls/{id}/recommendations` | No | List recommendations for hall |
+
+**Create/update body (POST/PUT):** `city`, `hall_name`, `email`, `stage`, `pipe_height`, `stage_type` (optional on PUT).  
+**Auth:** send API key in header, e.g. `X-API-Key: <SECRET_KEY>`.
+
+---
+
+## 🧪 Tests
+
+```bash
+PYTHONPATH=. pytest tests/ -v
 ```
 
+---
 
-## Run Tests
-You can run the tests by executing the test_app.py file:
-```
- PYTHONPATH=. pytest tests/test_main.py -v
-```
+## 📁 Layout
 
+- `app/` – application code  
+  - `core/` – config, auth, exceptions, logger  
+  - `db/` – Neon connection, session, SQLAlchemy models  
+  - `routes/` – HTTP endpoints  
+  - `schemas/` – Pydantic request/response models  
+  - `services/` – business logic  
+- `static/` – static files (e.g. `ads.txt`)  
+- `tests/` – pytest tests  
 
-
-
+See `PROJECT_STRUCTURE.md` for more detail.

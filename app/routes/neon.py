@@ -1,99 +1,107 @@
-from fastapi import APIRouter, Depends, HTTPException, Path, Body
-from app.schemas.neon import MusicHall, UpdateMusicHall  # Import the Pydantic model
-from app.services.neon import (insert_music_hall, get_music_hall, update_music_hall, get_music_hall_list,
-                               get_music_hall_recommendations)
+from fastapi import APIRouter, Depends, Path, Body, status
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.schemas.neon import (
+    MusicHall,
+    UpdateMusicHall,
+    MusicHallResponse,
+    MusicHallListItem,
+    MusicHallRecommendation,
+)
+from app.services.neon import (
+    insert_music_hall,
+    get_music_hall,
+    update_music_hall,
+    get_music_hall_list,
+    get_music_hall_recommendations,
+    delete_music_hall,
+)
 from app.core.auth import verify_api_key
-from app.db.dependencies import get_db_pool
-from app.core.exceptions import handle_db_exception
-from app.core.logger import setup_logger
-import asyncpg
+from app.db.dependencies import get_async_session
 
 router = APIRouter(prefix="/db", tags=["Music Hall Management"])
-logger = setup_logger(__name__)
 
 
-# Retrieve a music hall list
-@router.get("/music-halls-list/")
-async def fetch_music_hall_list(db_pool: asyncpg.Pool = Depends(get_db_pool)):
-    try:
-        hall_list = await get_music_hall_list(db_pool)
-        return hall_list
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise handle_db_exception(e)
+@router.get(
+    "/music-halls",
+    response_model=list[MusicHallListItem],
+    summary="List all music halls",
+    description="Retrieve a list of all music halls with their IDs and combined city/hall name",
+)
+async def fetch_music_hall_list(session: AsyncSession = Depends(get_async_session)):
+    hall_list = await get_music_hall_list(session)
+    return hall_list
 
-# Retrieve a music hall by ID
-@router.get("/music-halls/{hall_id}", response_model=MusicHall)
+
+@router.get(
+    "/music-halls/{hall_id}",
+    response_model=MusicHallResponse,
+    summary="Get music hall by ID",
+    description="Retrieve detailed information about a specific music hall by its ID",
+)
 async def fetch_music_hall(
-        hall_id: int = Path(..., gt=0),
-        db_pool: asyncpg.Pool = Depends(get_db_pool)
+    hall_id: int = Path(..., gt=0, description="Unique identifier of the music hall"),
+    session: AsyncSession = Depends(get_async_session),
 ):
-    try:
-        hall = await get_music_hall(hall_id, db_pool)
-        return hall
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise handle_db_exception(e)
+    hall = await get_music_hall(hall_id, session)
+    return hall
 
-# Endpoint to create a new music hall
-@router.post("/music-halls/")
+
+@router.post(
+    "/music-halls",
+    response_model=MusicHallResponse,
+    status_code=status.HTTP_201_CREATED,
+    summary="Create a new music hall",
+    description="Create a new music hall entry. Requires API key authentication.",
+)
 async def create_music_hall(
-        hall: MusicHall,
-        api_key: str = Depends(verify_api_key),
-        db_pool: asyncpg.Pool = Depends(get_db_pool)
+    hall: MusicHall,
+    api_key: str = Depends(verify_api_key),
+    session: AsyncSession = Depends(get_async_session),
 ):
-    # Prepare data tuple for database insertion
-    hall_data = (
-        hall.city,
-        hall.hall_name,
-        hall.email,
-        hall.stage,
-        hall.pipe_height,
-        hall.stage_type
-    )
-    try:
-        inserted_row = await insert_music_hall(hall_data, db_pool)  # Insert the data into the database
-        return {
-            "id": inserted_row["id"],
-            "city": inserted_row["city"],
-            "hall_name": inserted_row["hall_name"],
-            "email": hall.email,
-            "stage": hall.stage,
-            "pipe_height": hall.pipe_height,
-            "stage_type": hall.stage_type,
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise handle_db_exception(e)
+    inserted = await insert_music_hall(session, hall)
+    return inserted
 
-@router.put("/music-halls/{hall_id}")
+
+@router.put(
+    "/music-halls/{hall_id}",
+    response_model=MusicHallResponse,
+    summary="Update a music hall",
+    description="Update an existing music hall. Only provided fields will be updated. Requires API key authentication.",
+)
 async def update_hall(
-        hall_id: int = Path(..., gt=0),
-        hall_data: UpdateMusicHall = Body(...),
-        api_key: str = Depends(verify_api_key),
-        db_pool: asyncpg.Pool = Depends(get_db_pool)
+    hall_id: int = Path(..., gt=0, description="Unique identifier of the music hall to update"),
+    hall_data: UpdateMusicHall = Body(...),
+    api_key: str = Depends(verify_api_key),
+    session: AsyncSession = Depends(get_async_session),
 ):
-    try:
-        updates =  hall_data.model_dump(exclude_unset=True)
-        return await update_music_hall(hall_id, updates, db_pool)
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise handle_db_exception(e)
+    updates = hall_data.model_dump(exclude_unset=True)
+    return await update_music_hall(hall_id, updates, session)
 
-@router.get("/music-halls/{hall_id}/recommendations")
+
+@router.delete(
+    "/music-halls/{hall_id}",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Delete a music hall",
+    description="Delete a music hall by ID. Requires API key authentication.",
+)
+async def delete_hall(
+    hall_id: int = Path(..., gt=0, description="Unique identifier of the music hall to delete"),
+    api_key: str = Depends(verify_api_key),
+    session: AsyncSession = Depends(get_async_session),
+):
+    await delete_music_hall(hall_id, session)
+
+
+@router.get(
+    "/music-halls/{hall_id}/recommendations",
+    response_model=list[MusicHallRecommendation],
+    summary="Get music hall recommendations",
+    description="Retrieve all recommendations for a specific music hall, ordered by most recent first",
+)
 async def fetch_music_hall_recommendations(
-        hall_id: int = Path(..., gt=0),
-        db_pool: asyncpg.Pool = Depends(get_db_pool)
+    hall_id: int = Path(..., gt=0, description="Unique identifier of the music hall"),
+    session: AsyncSession = Depends(get_async_session),
 ):
-    try:
-        recommendations = await get_music_hall_recommendations(hall_id, db_pool)
-        return recommendations
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise handle_db_exception(e)
-
+    recommendations = await get_music_hall_recommendations(hall_id, session)
+    return recommendations

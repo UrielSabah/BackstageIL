@@ -1,6 +1,7 @@
 from pydantic import BaseModel , Field, EmailStr, ConfigDict
 from enum import Enum
 from typing import Optional
+from datetime import date
 
 class StageType(str, Enum):
     open = "open"
@@ -37,6 +38,46 @@ class UpdateMusicHall(BaseModel):
     stage: Optional[bool] = None
     pipe_height: Optional[int] = Field(None, ge=0, le=100)
     stage_type: Optional[StageType] = None
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+class MusicHallResponse(MusicHall):
+    """MusicHall with ID for response models"""
+    id: int = Field(..., description="Unique identifier for the music hall")
+
+    model_config = ConfigDict(
+        from_attributes=True,
+        json_schema_extra={
+            "example": {
+                "id": 1,
+                "city": "Tel Aviv",
+                "hall_name": "Barby",
+                "email": "info@barby.com",
+                "stage": True,
+                "pipe_height": 30,
+                "stage_type": "raised"
+            }
+        }
+    )
+
+
+class MusicHallListItem(BaseModel):
+    """Simplified music hall item for list endpoints"""
+    id: int = Field(..., description="Unique identifier for the music hall")
+    city_and_hall_name: str = Field(..., description="Combined city and hall name")
+
+    model_config = ConfigDict(
+        from_attributes=True
+    )
+
+
+class MusicHallRecommendation(BaseModel):
+    """Recommendation for a music hall"""
+    update_date: date = Field(..., description="Date when the recommendation was last updated")
+    recommendation: str = Field(..., description="Recommendation text")
 
     model_config = ConfigDict(
         from_attributes=True

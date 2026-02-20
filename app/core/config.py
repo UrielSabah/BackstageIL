@@ -1,19 +1,19 @@
-from pydantic import  Field, ConfigDict
+from pydantic import Field, ConfigDict
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
-    DB_URL: str
+    DB_URL: str = Field(..., description="PostgreSQL URL (e.g. Neon); sslmode=require is handled for asyncpg")
     SECRET_KEY: str
 
-    AWS_ACCESS_KEY_ID: str
-    AWS_SECRET_ACCESS_KEY: str
-    AWS_REGION_NAME: str = Field(default="eu-north-1")
-    BUCKET_NAME: str
-    AWS_USER_NAME: str
+    # Optional pool tuning (defaults are fine for Neon serverless)
+    DB_POOL_SIZE: int = Field(default=5, ge=1, le=20)
+    DB_MAX_OVERFLOW: int = Field(default=10, ge=0, le=20)
 
     model_config = ConfigDict(
         env_file=".env",
-        env_file_encoding="utf-8"
+        env_file_encoding="utf-8",
     )
+
 
 settings = Settings()

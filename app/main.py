@@ -1,44 +1,64 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import ORJSONResponse, FileResponse
 from pathlib import Path
 from contextlib import asynccontextmanager
 
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import ORJSONResponse, FileResponse, JSONResponse
+
 from app.routes import api_router
-from app.db.neondb import init_db_pool, close_db_pool
-from app.db.awsdb import init_aws,close_aws
+from app.db.neondb import init_db, close_db
+from app.core.exceptions import DomainException, handle_domain_exception, handle_db_exception
+
+# Project root (parent of app/); static/ lives here
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 
 @asynccontextmanager
 async def lifespan(fastapi_app: FastAPI):
-    await init_db_pool(fastapi_app)
-    await init_aws()
-
+    await init_db(fastapi_app)
     yield
-
-    await close_aws()
-    await close_db_pool(fastapi_app)
+    await close_db(fastapi_app)
 
 
 app = FastAPI(
     title="BackstageIL API",
-    description="API for technical information for backstage's",
+    description="API for technical information for backstage venues and music halls",
     version="1.0.0",
     default_response_class=ORJSONResponse,
-    lifespan=lifespan
+    lifespan=lifespan,
 )
+
+
+@app.exception_handler(DomainException)
+async def domain_exception_handler(request: Request, exc: DomainException) -> JSONResponse:
+    http_exc = handle_domain_exception(exc)
+    return JSONResponse(
+        status_code=http_exc.status_code,
+        content=http_exc.detail if isinstance(http_exc.detail, dict) else {"detail": http_exc.detail},
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    if isinstance(exc, HTTPException):
+        content = exc.detail if isinstance(exc.detail, dict) else {"detail": exc.detail}
+        return JSONResponse(status_code=exc.status_code, content=content)
+    http_exc = handle_db_exception(exc)
+    content = http_exc.detail if isinstance(http_exc.detail, dict) else {"detail": http_exc.detail}
+    return JSONResponse(status_code=http_exc.status_code, content=content)
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  #todo: Replace '*' with allowed origins in prod
+    allow_origins=["*"],  # TODO: Replace '*' with allowed origins in production
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
 
 app.include_router(api_router)
 
+
 @app.get("/ads.txt", include_in_schema=False)
 async def ads():
-    return FileResponse(Path("static/ads.txt"))
+    return FileResponse(BASE_DIR / "static" / "ads.txt")
