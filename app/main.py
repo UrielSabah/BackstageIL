@@ -5,7 +5,8 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import ORJSONResponse, FileResponse, JSONResponse
 
-from app.routes import api_router
+from app.routes.health import router as health_router
+from app.routes.neon import router as neon_router
 from app.db.neondb import init_db, close_db
 from app.core.exceptions import DomainException, handle_domain_exception, handle_db_exception
 
@@ -55,7 +56,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(api_router)
+app.include_router(health_router)
+app.include_router(neon_router)
 
 
 @app.get("/ads.txt", include_in_schema=False)
