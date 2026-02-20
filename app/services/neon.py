@@ -84,7 +84,7 @@ async def insert_music_hall(session: AsyncSession, hall: MusicHall) -> dict:
 
 async def update_music_hall(
     hall_id: int,
-    updates: dict,
+    updates: dict[str, object],
     session: AsyncSession,
 ) -> dict:
     """

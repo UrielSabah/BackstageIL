@@ -9,8 +9,12 @@ from app.routes import api_router
 from app.db.neondb import init_db, close_db
 from app.core.exceptions import DomainException, handle_domain_exception, handle_db_exception
 
-# Project root (parent of app/); static/ lives here
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+def _response_content(detail: dict | str) -> dict:
+    """Normalize exception detail for JSON response."""
+    return detail if isinstance(detail, dict) else {"detail": detail}
 
 
 @asynccontextmanager
@@ -30,22 +34,17 @@ app = FastAPI(
 
 
 @app.exception_handler(DomainException)
-async def domain_exception_handler(request: Request, exc: DomainException) -> JSONResponse:
+async def domain_exception_handler(_request: Request, exc: DomainException) -> JSONResponse:
     http_exc = handle_domain_exception(exc)
-    return JSONResponse(
-        status_code=http_exc.status_code,
-        content=http_exc.detail if isinstance(http_exc.detail, dict) else {"detail": http_exc.detail},
-    )
+    return JSONResponse(status_code=http_exc.status_code, content=_response_content(http_exc.detail))
 
 
 @app.exception_handler(Exception)
-async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+async def unhandled_exception_handler(_request: Request, exc: Exception) -> JSONResponse:
     if isinstance(exc, HTTPException):
-        content = exc.detail if isinstance(exc.detail, dict) else {"detail": exc.detail}
-        return JSONResponse(status_code=exc.status_code, content=content)
+        return JSONResponse(status_code=exc.status_code, content=_response_content(exc.detail))
     http_exc = handle_db_exception(exc)
-    content = http_exc.detail if isinstance(http_exc.detail, dict) else {"detail": http_exc.detail}
-    return JSONResponse(status_code=http_exc.status_code, content=content)
+    return JSONResponse(status_code=http_exc.status_code, content=_response_content(http_exc.detail))
 
 
 app.add_middleware(

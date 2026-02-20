@@ -1,23 +1,16 @@
 """
-SQLAlchemy ORM models for Neon PostgreSQL.
+SQLAlchemy ORM models for Neon PostgreSQL (declarative style).
 Tables: music_halls, music_hall_recommendations.
 """
 from datetime import datetime
-from sqlalchemy import String, Integer, Boolean, Text, ForeignKey, func
+
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-import enum
 
 
 class Base(DeclarativeBase):
     """Declarative base for all ORM models."""
     pass
-
-
-class StageTypeEnum(str, enum.Enum):
-    open = "open"
-    closed = "closed"
-    portable = "portable"
-    raised = "raised"
 
 
 class MusicHallModel(Base):
@@ -54,7 +47,7 @@ class MusicHallModel(Base):
 class MusicHallRecommendationModel(Base):
     """
     ORM model for music_hall_recommendations table.
-    Table has no surrogate id; composite PK (hall_id, recommendation, update_date).
+    Composite PK (hall_id, recommendation, update_date); no surrogate id.
     """
 
     __tablename__ = "music_hall_recommendations"
@@ -67,7 +60,9 @@ class MusicHallRecommendationModel(Base):
     )
     recommendation: Mapped[str] = mapped_column(Text, primary_key=True, nullable=False)
     update_date: Mapped[datetime] = mapped_column(
-        primary_key=True, nullable=False, server_default=func.now()
+        DateTime,
+        nullable=False,
+        server_default=func.now(),
     )
 
     hall: Mapped["MusicHallModel"] = relationship(

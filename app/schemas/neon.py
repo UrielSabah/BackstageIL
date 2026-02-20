@@ -1,13 +1,15 @@
-from pydantic import BaseModel , Field, EmailStr, ConfigDict
-from enum import Enum
-from typing import Optional
 from datetime import date
+from enum import Enum
+
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
+
 
 class StageType(str, Enum):
     open = "open"
     closed = "closed"
     portable = "portable"
     raised = "raised"
+
 
 class MusicHall(BaseModel):
     city: str = Field(..., min_length=2, max_length=100, description="City where the hall is located")
@@ -31,13 +33,15 @@ class MusicHall(BaseModel):
         }
     )
 
+
 class UpdateMusicHall(BaseModel):
-    city: Optional[str] = Field(None, min_length=2, max_length=100)
-    hall_name: Optional[str] = Field(None, min_length=2, max_length=100)
-    email: Optional[EmailStr] = None
-    stage: Optional[bool] = None
-    pipe_height: Optional[int] = Field(None, ge=0, le=100)
-    stage_type: Optional[StageType] = None
+    """Partial update; only provided fields are applied."""
+    city: str | None = Field(None, min_length=2, max_length=100)
+    hall_name: str | None = Field(None, min_length=2, max_length=100)
+    email: EmailStr | None = None
+    stage: bool | None = None
+    pipe_height: int | None = Field(None, ge=0, le=100)
+    stage_type: StageType | None = None
 
     model_config = ConfigDict(
         from_attributes=True

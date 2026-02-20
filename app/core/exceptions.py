@@ -1,7 +1,7 @@
 import asyncpg
 from fastapi import HTTPException, status
 from app.core.logger import setup_logger
-from typing import Optional, Dict, Any
+from typing import Any
 from enum import Enum
 
 try:
@@ -48,7 +48,7 @@ class DomainException(Exception):
         error_code: ErrorCode,
         error_type: ErrorType,
         status_code: int,
-        details: Optional[Dict[str, Any]] = None
+        details: dict[str, Any] | None = None
     ):
         """
         Initialize domain exception.
