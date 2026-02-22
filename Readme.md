@@ -110,4 +110,3 @@ PYTHONPATH=. pytest tests/ -v
 - `static/` – static files (e.g. `ads.txt`)  
 - `tests/` – pytest tests  
 
-See `PROJECT_STRUCTURE.md` for more detail.
